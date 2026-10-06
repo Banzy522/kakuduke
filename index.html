@@ -5,128 +5,329 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>格付けモニター</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@1,500&family=Shippori+Mincho+B1:wght@500;700;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
-/* ===== 設定はページ下部 CONFIG を参照 ===== */
+@property --ang{syntax:'<angle>';inherits:false;initial-value:0deg}
 :root{
-  --bg:#07070c;
-  --gold1:#fff4c2; --gold2:#f5c542; --gold3:#a8781a;
-  --silver1:#ffffff; --silver2:#cfd6e3; --silver3:#7d8799;
-  --plain:#e8e8ec; --dim:#6b6b72;
+  --ink:#06060b;
+  --gold-hi:#fff6d6; --gold:#e9c46a; --gold-mid:#d4a73c; --gold-lo:#8a6417;
+  --champ:#efe6d2; --silver:#d7dce6; --silver-lo:#8c95a8;
+  --plain:#d9d9df; --dim:#5d5d66;
+  --serif:"Shippori Mincho B1","Noto Serif CJK JP","Noto Serif JP",serif;
+  --latin:"Cinzel","Times New Roman",serif;
+  --italic:"Cormorant Garamond",Georgia,serif;
+  --sans:"Noto Sans JP","Noto Sans CJK JP",sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
-body{background:radial-gradient(ellipse at 50% 0%,#1a1626 0%,var(--bg) 60%);color:#fff;
-  font-family:"Noto Sans JP",sans-serif;}
-.mincho{font-family:"Shippori Mincho B1",serif}
+body{background:var(--ink);color:#fff;font-family:var(--sans)}
 
-/* ---------- ヘッダー ---------- */
-header{height:11vh;display:flex;align-items:center;justify-content:center;gap:2vw;
-  border-bottom:1px solid rgba(245,197,66,.25)}
-header h1{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:5.2vh;letter-spacing:.35em;
-  background:linear-gradient(180deg,var(--gold1),var(--gold2) 55%,var(--gold3));-webkit-background-clip:text;background-clip:text;color:transparent}
-header .sub{font-size:1.8vh;color:#a99a72;letter-spacing:.2em}
+/* ============ 背景 ============ */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.bg .base{position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% -10%,rgba(233,196,106,.22),transparent 60%),
+    radial-gradient(ellipse 60% 80% at 0% 100%,rgba(90,40,120,.28),transparent 60%),
+    radial-gradient(ellipse 60% 80% at 100% 100%,rgba(30,60,120,.30),transparent 60%),
+    linear-gradient(180deg,#0d0b16 0%,#07060d 60%,#040408 100%)}
+.bg .beam{position:absolute;top:-20vh;width:38vw;height:130vh;transform-origin:50% 0;
+  background:linear-gradient(180deg,rgba(255,236,180,.16),rgba(255,236,180,0) 75%);
+  clip-path:polygon(45% 0,55% 0,100% 100%,0 100%);filter:blur(6px);mix-blend-mode:screen}
+.bg .beam.l{left:2vw;animation:swayL 11s ease-in-out infinite}
+.bg .beam.r{right:2vw;animation:swayR 13s ease-in-out infinite}
+@keyframes swayL{0%,100%{transform:rotate(-22deg)}50%{transform:rotate(-8deg)}}
+@keyframes swayR{0%,100%{transform:rotate(22deg)}50%{transform:rotate(8deg)}}
+.bg .pattern{position:absolute;inset:0;opacity:.05;
+  background-image:repeating-linear-gradient(45deg,#e9c46a 0 1px,transparent 1px 22px),repeating-linear-gradient(-45deg,#e9c46a 0 1px,transparent 1px 22px)}
+.bg .vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.75) 100%)}
+canvas#ambient{position:fixed;inset:0;z-index:1;pointer-events:none}
 
-/* ---------- ボード ---------- */
-#board{height:89vh;display:grid;grid-template-rows:1.5fr 1.2fr 1fr .8fr;gap:1.2vh;padding:1.5vh 2vw}
-.tier{display:flex;align-items:center;gap:2vw;border-radius:1.2vh;padding:0 2vw;overflow:hidden;position:relative}
-.tier .label{flex:0 0 13vw;text-align:center;font-family:"Shippori Mincho B1",serif;font-weight:800;line-height:1}
-.tier .label small{display:block;font-family:"Noto Sans JP";font-weight:400;font-size:1.5vh;margin-top:.8vh;letter-spacing:.1em;opacity:.75}
-.tier .names{flex:1;display:flex;flex-wrap:wrap;align-content:center;gap:1vh 1.6vw;overflow:hidden;max-height:100%}
-.tier .empty{opacity:.35;font-size:1.8vh}
+.app{position:relative;z-index:2;height:100%;display:flex;flex-direction:column}
 
-/* 1流：華やか */
-.t1{background:linear-gradient(110deg,#2a1d05,#4a3408 40%,#2a1d05);border:2px solid var(--gold2);
-  box-shadow:0 0 3vh rgba(245,197,66,.35), inset 0 0 4vh rgba(245,197,66,.15)}
-.t1::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,240,180,.25) 50%,transparent 70%);
-  transform:translateX(-100%);animation:shine 4s ease-in-out infinite;pointer-events:none}
-.t1 .label{font-size:7vh;background:linear-gradient(180deg,var(--gold1),var(--gold2) 50%,var(--gold3));-webkit-background-clip:text;background-clip:text;color:transparent;
-  filter:drop-shadow(0 0 1vh rgba(245,197,66,.6))}
-.t1 .label small{color:var(--gold1);-webkit-text-fill-color:var(--gold1)}
-.t1 .name{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:5vh;
-  background:linear-gradient(180deg,#fffbe6,var(--gold2) 60%,#c99520);-webkit-background-clip:text;background-clip:text;color:transparent;
-  filter:drop-shadow(0 0 .8vh rgba(255,215,90,.7))}
-.t1 .name::before{content:"♛ ";-webkit-text-fill-color:var(--gold2)}
+/* ============ ヘッダー ============ */
+header{flex:0 0 15vh;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 3vw}
+.hside{display:flex;align-items:center;gap:1.2vw;font-family:var(--latin);letter-spacing:.25em;font-size:1.6vh;color:#bfae86}
+.hside.right{justify-content:flex-end}
+.live{display:inline-flex;align-items:center;gap:.6vw;padding:.6vh 1vw;border:1px solid rgba(233,196,106,.45);border-radius:99px;color:var(--gold)}
+.live i{width:.9vh;height:.9vh;border-radius:50%;background:#ff4d5e;box-shadow:0 0 1vh #ff4d5e;animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.count b{font-family:var(--serif);font-size:3vh;color:var(--gold-hi);margin:0 .3vw;letter-spacing:0}
+#clock{font-size:2.4vh;color:var(--gold-hi);letter-spacing:.15em}
 
-/* 2流：まあまあ華やか */
-.t2{background:linear-gradient(110deg,#1b1f29,#2b3140 50%,#1b1f29);border:1px solid var(--silver2);box-shadow:0 0 1.5vh rgba(207,214,227,.2)}
-.t2 .label{font-size:5.6vh;background:linear-gradient(180deg,#fff,var(--silver2) 60%,var(--silver3));-webkit-background-clip:text;background-clip:text;color:transparent}
-.t2 .label small{-webkit-text-fill-color:var(--silver2)}
-.t2 .name{font-family:"Shippori Mincho B1",serif;font-weight:600;font-size:3.6vh;color:#f3f6fb;text-shadow:0 0 .8vh rgba(200,215,240,.45)}
+.title{text-align:center}
+.title .en{font-family:var(--latin);font-weight:500;font-size:1.7vh;letter-spacing:.9em;padding-left:.9em;color:#c9b07a}
+.title h1{font-family:var(--serif);font-weight:800;font-size:6.6vh;letter-spacing:.32em;padding-left:.32em;line-height:1.15;
+  background:linear-gradient(100deg,var(--gold-lo) 0%,var(--gold) 20%,var(--gold-hi) 35%,var(--gold) 50%,var(--gold-mid) 70%,var(--gold-hi) 85%,var(--gold-lo) 100%);
+  background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:sheen 7s linear infinite;filter:drop-shadow(0 .3vh 1.2vh rgba(233,196,106,.35))}
+@keyframes sheen{to{background-position:-250% 0}}
+.orn{display:flex;align-items:center;justify-content:center;gap:1vw;margin-top:.4vh}
+.orn span{height:1px;width:12vw;background:linear-gradient(90deg,transparent,var(--gold))}
+.orn span:last-child{transform:scaleX(-1)}
+.orn em{width:.9vh;height:.9vh;transform:rotate(45deg);background:var(--gold);box-shadow:0 0 1vh var(--gold)}
 
-/* 3流：ふつう */
-.t3{background:#16161b;border:1px solid #2c2c33}
-.t3 .label{font-size:4.4vh;color:var(--plain)}
-.t3 .name{font-size:2.8vh;font-weight:400;color:var(--plain)}
+/* ============ ボード ============ */
+#board{flex:1;min-height:0;display:grid;grid-template-columns:1.45fr 1fr;grid-template-rows:1.5fr 1.1fr 1fr;
+  grid-template-areas:"t1 t1" "t2 t2" "t3 t4";gap:1.6vh 1.4vw;padding:.5vh 3vw 1.6vh}
+.tier{position:relative;display:flex;align-items:center;gap:2.4vw;padding:0 2.6vw;border-radius:1.6vh;overflow:hidden;isolation:isolate}
+.t1{grid-area:t1}.t2{grid-area:t2}.t3{grid-area:t3}.t4{grid-area:t4}
+.label{flex:0 0 auto;min-width:11vw;display:flex;flex-direction:column;align-items:center;gap:.6vh;text-align:center}
+.label .jp{font-family:var(--serif);font-weight:800;line-height:1}
+.label .en{font-family:var(--latin);letter-spacing:.35em;font-size:1.3vh;padding-left:.35em}
+.label .pt{font-family:var(--italic);font-style:italic;font-size:1.8vh;opacity:.8}
+.divider{align-self:stretch;width:1px;margin:2.5vh 0}
+.names{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-content:center;gap:1.2vh 1.2vw;max-height:100%;overflow:hidden;padding:1.5vh 0}
+.empty{font-family:var(--italic);font-style:italic;letter-spacing:.2em;opacity:.35;font-size:2vh}
 
-/* 4流：地味 */
-.t4{background:#0e0e11;border:1px dashed #26262b}
-.t4 .label{font-size:3.4vh;color:var(--dim)}
-.t4 .name{font-size:2vh;color:var(--dim)}
+/* --- 一流 --- */
+.t1{background:linear-gradient(120deg,rgba(60,40,6,.85),rgba(110,78,16,.55) 45%,rgba(50,34,6,.85));
+  box-shadow:0 0 4vh rgba(233,196,106,.25),inset 0 0 6vh rgba(255,220,130,.10)}
+.t1::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:2px;z-index:-1;
+  background:conic-gradient(from var(--ang),var(--gold-lo),var(--gold-hi),var(--gold),var(--gold-lo),var(--gold-hi),var(--gold-lo));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+  animation:spinAng 6s linear infinite}
+@keyframes spinAng{to{--ang:360deg}}
+.t1::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,240,190,.18) 50%,transparent 65%);transform:translateX(-120%);animation:sweep 5s ease-in-out infinite}
+@keyframes sweep{0%{transform:translateX(-120%)}55%,100%{transform:translateX(120%)}}
+.t1 .corner{position:absolute;width:3.2vh;height:3.2vh;border:2px solid var(--gold);opacity:.9}
+.t1 .c1{top:1vh;left:1vh;border-right:0;border-bottom:0}.t1 .c2{top:1vh;right:1vh;border-left:0;border-bottom:0}
+.t1 .c3{bottom:1vh;left:1vh;border-right:0;border-top:0}.t1 .c4{bottom:1vh;right:1vh;border-left:0;border-top:0}
+.t1 .label .jp{font-size:8.4vh;background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-lo));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 1.4vh rgba(233,196,106,.55))}
+.t1 .label .en,.t1 .label .pt{color:var(--gold)}
+.t1 .label .crown{font-size:2.6vh;color:var(--gold);filter:drop-shadow(0 0 .8vh var(--gold))}
+.t1 .divider{background:linear-gradient(180deg,transparent,var(--gold),transparent)}
+.t1 .name{position:relative;overflow:hidden;font-family:var(--serif);font-weight:800;font-size:4.6vh;color:#2b1c02;
+  padding:1vh 2vw 1.1vh;border-radius:.8vh;
+  background:linear-gradient(180deg,#fff3c4 0%,#f1cf72 40%,#d6a93f 62%,#f6dc8e 100%);
+  box-shadow:0 .6vh 2vh rgba(0,0,0,.45),0 0 2.4vh rgba(255,210,100,.45),inset 0 1px 0 rgba(255,255,255,.8)}
+.t1 .name::before{content:"♛";margin-right:.6vw;font-size:.75em;color:#7a5408}
+.t1 .name::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.75),transparent);transform:skewX(-20deg);animation:glint 3.8s ease-in-out infinite}
+.t1 .name:nth-child(2n)::after{animation-delay:1.2s}.t1 .name:nth-child(3n)::after{animation-delay:2.1s}
+@keyframes glint{0%{left:-60%}45%,100%{left:130%}}
+
+/* --- 二流 --- */
+.t2{background:linear-gradient(120deg,rgba(40,46,62,.75),rgba(70,78,98,.45) 50%,rgba(36,40,54,.75));
+  border:1px solid rgba(215,220,230,.55);box-shadow:0 0 2.4vh rgba(200,210,235,.12),inset 0 1px 0 rgba(255,255,255,.15);backdrop-filter:blur(4px)}
+.t2 .label .jp{font-size:6.4vh;background:linear-gradient(180deg,#fff,var(--silver) 55%,var(--silver-lo));-webkit-background-clip:text;background-clip:text;color:transparent}
+.t2 .label .en,.t2 .label .pt{color:var(--silver)}
+.t2 .divider{background:linear-gradient(180deg,transparent,rgba(215,220,230,.7),transparent)}
+.t2 .name{font-family:var(--serif);font-weight:700;font-size:3.4vh;color:#fbfcff;padding:.8vh 1.6vw;border-radius:99px;
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.04));border:1px solid rgba(230,235,245,.5);
+  text-shadow:0 0 1vh rgba(210,225,255,.55)}
+
+/* --- 三流 --- */
+.t3{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09)}
+.t3 .label .jp{font-size:4.8vh;color:var(--plain)}
+.t3 .label .en,.t3 .label .pt{color:#9a9aa3}
+.t3 .divider{background:rgba(255,255,255,.12)}
+.t3 .name{font-family:var(--sans);font-size:2.6vh;color:var(--plain);padding:.3vh .2vw;border-bottom:1px solid rgba(255,255,255,.15)}
+
+/* --- 四流 --- */
+/* --- 四流：残念 --- */
+.t4{background:linear-gradient(180deg,#1b1c1f,#141416);border:1px dashed rgba(255,255,255,.10);border-radius:.4vh;
+  filter:saturate(0);box-shadow:inset 0 2vh 4vh rgba(0,0,0,.6)}
+/* しとしと雨 */
+.t4::before{content:"";position:absolute;inset:-50% 0 0 0;z-index:-1;opacity:.22;pointer-events:none;
+  background:repeating-linear-gradient(100deg,transparent 0 1.4vw,rgba(160,175,195,.55) 1.4vw calc(1.4vw + 1px),transparent calc(1.4vw + 1px) 3.1vw);
+  background-size:100% 9vh;animation:rain .7s linear infinite}
+@keyframes rain{to{transform:translateY(9vh)}}
+/* 隅のクモの巣 */
+.t4::after{content:"";position:absolute;top:0;right:0;width:7vh;height:7vh;opacity:.35;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60' fill='none' stroke='%23aaa' stroke-width='.7'%3E%3Cpath d='M60 0L0 60M60 0L20 60M60 0L0 20M60 0L40 60M60 0L0 40'/%3E%3Cpath d='M48 0Q50 10 60 12M36 0Q40 20 60 24M24 0Q30 30 60 36M12 0Q20 40 60 48'/%3E%3C/svg%3E") no-repeat top right/contain}
+.t4 .label{min-width:7vw;position:relative}
+.t4 .label .cloud{font-size:2.4vh;color:#5b5f68;line-height:1;animation:bob 3s ease-in-out infinite}
+.t4 .label .cloud::after{content:"' '";display:block;font-size:1.4vh;letter-spacing:.2em;color:#4c6070;margin-top:-.3vh}
+@keyframes bob{50%{transform:translateY(.4vh)}}
+.t4 .label .jp{font-size:3.6vh;color:#56565c;transform:rotate(-9deg) translateY(.4vh);transform-origin:left bottom;animation:flicker 6s steps(1) infinite}
+@keyframes flicker{0%,100%{opacity:.85}8%{opacity:.25}9%{opacity:.85}11%{opacity:.15}12%{opacity:.8}57%{opacity:.85}58%{opacity:.3}60%{opacity:.85}}
+.t4 .label .en{color:#45454c;letter-spacing:.15em;font-size:1.1vh}
+.t4 .label .pt{color:#45454c}
+.t4 .divider{background:rgba(255,255,255,.05)}
+.t4 .names{gap:1.4vh 1.6vw}
+.t4 .name{font-family:var(--sans);font-weight:300;font-size:1.9vh;color:#5f5f66;display:inline-block;
+  transform-origin:left top;animation:droop 4s ease-in-out infinite}
+.t4 .name::after{content:"…";color:#44444a;margin-left:.2vw}
+.t4 .name:nth-child(3n+1){--r:4deg}.t4 .name:nth-child(3n+2){--r:-3deg;animation-delay:-1.3s}.t4 .name:nth-child(3n){--r:7deg;animation-delay:-2.6s}
+@keyframes droop{0%,100%{transform:rotate(var(--r,4deg)) translateY(.3vh)}50%{transform:rotate(calc(var(--r,4deg) + 2deg)) translateY(.7vh)}}
 
 .name{white-space:nowrap}
-.name.new{animation:pop 1.2s ease-out}
+.name.new{animation:pop 1.2s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pop{0%{transform:scale(1.9);opacity:0;filter:blur(6px)}100%{transform:none;opacity:1;filter:none}}
 
-@keyframes shine{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}
-@keyframes pop{0%{transform:scale(1.8);opacity:0}60%{transform:scale(.95);opacity:1}100%{transform:scale(1)}}
+/* ============ 待機画面 ============ */
+#idle{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3vh;text-align:center}
+.idle-on #idle{display:flex}
+.idle-on .tier{opacity:0}
+#idle .emblem{width:22vh;height:22vh;border-radius:50%;position:relative;display:grid;place-items:center}
+#idle .emblem::before{content:"";position:absolute;inset:0;border-radius:50%;padding:2px;
+  background:conic-gradient(from var(--ang),transparent,var(--gold-hi),var(--gold),transparent 60%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:spinAng 4s linear infinite}
+#idle .emblem::after{content:"";position:absolute;inset:2.2vh;border-radius:50%;border:1px solid rgba(233,196,106,.35)}
+#idle .emblem span{font-size:9vh;color:var(--gold);filter:drop-shadow(0 0 2vh rgba(233,196,106,.7))}
+#idle .msg{font-family:var(--serif);font-size:4vh;letter-spacing:.4em;color:var(--gold-hi)}
+#idle .sub{font-family:var(--latin);font-size:1.8vh;letter-spacing:.8em;color:#b39c6c;animation:pulse 2.4s infinite}
+#idle .legend{display:flex;gap:2.4vw;margin-top:2vh;font-family:var(--serif)}
+#idle .legend div{padding:1vh 1.6vw;border-radius:.8vh;font-size:2.2vh}
+#idle .legend .l1{color:#2b1c02;background:linear-gradient(180deg,#fff3c4,#e2b955)}
+#idle .legend .l2{color:#fff;border:1px solid var(--silver)}
+#idle .legend .l3{color:var(--plain);border:1px solid rgba(255,255,255,.15)}
+#idle .legend .l4{color:var(--dim);border:1px dashed rgba(255,255,255,.1)}
+#idle .legend small{font-family:var(--italic);font-style:italic;margin-left:.6vw;opacity:.8}
 
-/* ---------- 発表演出（全画面） ---------- */
-#reveal{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:10;overflow:hidden}
+/* ============ ティッカー ============ */
+footer{flex:0 0 5.2vh;display:flex;align-items:center;border-top:1px solid rgba(233,196,106,.25);background:linear-gradient(90deg,rgba(0,0,0,.6),rgba(40,28,6,.5),rgba(0,0,0,.6))}
+footer .tag{flex:0 0 auto;height:100%;display:flex;align-items:center;padding:0 2vw;font-family:var(--latin);font-size:1.5vh;letter-spacing:.4em;color:#1c1302;background:linear-gradient(180deg,var(--gold-hi),var(--gold-mid))}
+footer .track{flex:1;overflow:hidden;white-space:nowrap;mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
+#ticker{display:inline-block;padding-left:100%;animation:ticker 40s linear infinite;font-family:var(--serif);font-size:2.1vh;color:#e9e1cc}
+#ticker .it{margin-right:4vw}
+#ticker .k1{color:var(--gold)}#ticker .k2{color:var(--silver)}#ticker .k3{color:var(--plain)}#ticker .k4{color:#77777f}
+@keyframes ticker{to{transform:translateX(-100%)}}
+#status{flex:0 0 auto;padding:0 1.6vw;font-size:1.3vh;color:#6d6656;font-family:var(--sans)}
+#status.err{color:#e07a7a}
+
+/* ============ 発表演出（全画面） ============ */
+#reveal{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:10;overflow:hidden;background:#05050a}
 #reveal.show{display:flex}
-#reveal .who{font-size:4vh;letter-spacing:.2em;opacity:.8;margin-bottom:2vh}
+#reveal .who{font-family:var(--serif);font-size:4vh;letter-spacing:.25em;color:#e8dcc0;margin-bottom:3vh}
+#reveal .drum{font-family:var(--serif);font-size:8vh;letter-spacing:.5em;padding-left:.5em;color:var(--gold-hi);animation:blink .55s infinite alternate}
+#reveal .drumline{width:40vw;height:2px;margin-top:3vh;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:widen 1s ease-in-out infinite alternate}
+@keyframes widen{from{transform:scaleX(.3)}to{transform:scaleX(1)}}
+@keyframes blink{from{opacity:.3}to{opacity:1}}
+#reveal .ren{font-family:var(--latin);letter-spacing:.8em;padding-left:.8em;font-size:2.4vh;margin-bottom:2vh}
 #reveal .rname{font-weight:800;text-align:center;line-height:1.2;max-width:90vw;word-break:break-all}
-#reveal .rtier{font-family:"Shippori Mincho B1",serif;font-weight:800;margin-top:3vh}
-#reveal .rscore{margin-top:1.5vh;font-size:3vh;opacity:.7;letter-spacing:.15em}
-#reveal .drum{font-family:"Shippori Mincho B1",serif;font-size:7vh;letter-spacing:.4em;animation:blink .6s infinite alternate}
-@keyframes blink{from{opacity:.25}to{opacity:1}}
+#reveal .rtier{font-family:var(--serif);font-weight:800;margin-top:2.5vh;letter-spacing:.2em;padding-left:.2em}
+#reveal .rscore{margin-top:1.5vh;font-family:var(--italic);font-style:italic;font-size:4vh;opacity:.85}
 
-#reveal.r1{background:radial-gradient(circle at 50% 45%,#5a3f0a 0%,#1c1303 55%,#000 100%)}
-#reveal.r1 .rname{font-family:"Shippori Mincho B1",serif;font-size:14vh;
-  background:linear-gradient(180deg,#fffdf0,var(--gold2) 55%,#b07f16);-webkit-background-clip:text;background-clip:text;color:transparent;
-  filter:drop-shadow(0 0 2.5vh rgba(255,210,80,.8));animation:zoomIn 1s cubic-bezier(.2,1.6,.4,1)}
-#reveal.r1 .rtier{font-size:12vh;color:var(--gold2);text-shadow:0 0 4vh rgba(255,200,60,.9);animation:zoomIn 1s .4s both cubic-bezier(.2,1.6,.4,1)}
-#reveal.r1 .rays{position:absolute;inset:-50%;background:repeating-conic-gradient(from 0deg,rgba(255,215,100,.13) 0 6deg,transparent 6deg 18deg);animation:spin 30s linear infinite;z-index:-1}
+#reveal.r1{background:radial-gradient(circle at 50% 45%,#6b4c0f 0%,#241805 50%,#000 100%)}
+#reveal.r1 .rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg,rgba(255,215,100,.14) 0 5deg,transparent 5deg 15deg);animation:spin 40s linear infinite;z-index:-1}
+#reveal.r1 .ren{color:var(--gold)}
+#reveal.r1 .rname{font-family:var(--serif);font-size:15vh;background:linear-gradient(180deg,#fffdf0,var(--gold) 55%,#a87a14);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 3vh rgba(255,210,80,.8));animation:zoomIn 1s cubic-bezier(.2,1.6,.4,1)}
+#reveal.r1 .rtier{font-size:12vh;color:var(--gold-hi);text-shadow:0 0 4vh rgba(255,200,60,.9);animation:zoomIn 1s .4s both cubic-bezier(.2,1.6,.4,1)}
+#reveal.r1 .rscore{color:var(--gold)}
 
-#reveal.r2{background:radial-gradient(circle at 50% 45%,#3a4256 0%,#12151d 60%,#050608 100%)}
-#reveal.r2 .rname{font-family:"Shippori Mincho B1",serif;font-size:11vh;color:#fff;text-shadow:0 0 2vh rgba(200,215,240,.7);animation:zoomIn .8s ease-out}
-#reveal.r2 .rtier{font-size:9vh;background:linear-gradient(180deg,#fff,var(--silver2) 60%,var(--silver3));-webkit-background-clip:text;background-clip:text;color:transparent}
+#reveal.r2{background:radial-gradient(circle at 50% 45%,#46506a 0%,#141822 55%,#050608 100%)}
+#reveal.r2 .ren{color:var(--silver)}
+#reveal.r2 .rname{font-family:var(--serif);font-size:11vh;color:#fff;text-shadow:0 0 2.4vh rgba(200,215,240,.75);animation:zoomIn .8s ease-out}
+#reveal.r2 .rtier{font-size:9vh;background:linear-gradient(180deg,#fff,var(--silver) 60%,var(--silver-lo));-webkit-background-clip:text;background-clip:text;color:transparent}
 
-#reveal.r3{background:#18181d}
-#reveal.r3 .rname{font-size:9vh;color:var(--plain);animation:fadeUp .6s ease-out}
+#reveal.r3{background:radial-gradient(circle at 50% 45%,#24242b,#111115)}
+#reveal.r3 .ren{color:#8d8d96}
+#reveal.r3 .rname{font-family:var(--sans);font-size:9vh;color:var(--plain);animation:fadeUp .6s ease-out}
 #reveal.r3 .rtier{font-size:7vh;color:var(--plain)}
 
-#reveal.r4{background:#0b0b0d}
-#reveal.r4 .rname{font-size:6vh;color:var(--dim);font-weight:400;animation:fadeUp 1.2s ease-out}
-#reveal.r4 .rtier{font-size:5vh;color:#4b4b52}
+#reveal.r4{background:radial-gradient(ellipse at 50% 30%,#2a2c30 0%,#141518 60%,#0b0b0d 100%);animation:dimOut 6s ease-in forwards}
+@keyframes dimOut{to{filter:brightness(.7)}}
+#reveal.r4 .bulb{position:absolute;top:0;left:50%;width:60vw;height:100vh;transform:translateX(-50%);pointer-events:none;
+  background:linear-gradient(180deg,rgba(220,225,235,.10),transparent 70%);clip-path:polygon(46% 0,54% 0,85% 100%,15% 100%);animation:flicker 3s steps(1) infinite}
+#reveal.r4 .cloud{font-size:9vh;color:#4a4e57;line-height:1;margin-bottom:1vh;animation:bob 3s ease-in-out infinite}
+#reveal.r4 .ren{color:#4a4a52;letter-spacing:.4em}
+#reveal.r4 .rname{font-family:var(--sans);font-size:6vh;color:#6a6a72;font-weight:300;transform-origin:left top;animation:flop 1.6s cubic-bezier(.3,1.4,.5,1) forwards}
+@keyframes flop{0%{transform:translateY(-40vh) rotate(0);opacity:0}55%{transform:translateY(0) rotate(0);opacity:1}75%{transform:rotate(9deg)}88%{transform:rotate(5deg)}100%{transform:rotate(7deg) translateY(1vh)}}
+#reveal.r4 .rtier{font-size:5vh;color:#4d4d54;transform-origin:right bottom;animation:sag 2s 1.2s ease-in forwards}
+@keyframes sag{to{transform:rotate(-10deg) translateY(1.5vh)}}
+#reveal.r4 .rscore{color:#55555c;margin-top:3vh}
+#reveal.r4 .sad{margin-top:3vh;font-family:var(--serif);font-size:3.2vh;letter-spacing:.5em;color:#5d6470;opacity:0;animation:fadeUp 1s 2.4s forwards}
 
-@keyframes zoomIn{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes zoomIn{from{transform:scale(.2);opacity:0}to{transform:none;opacity:1}}
 @keyframes fadeUp{from{transform:translateY(3vh);opacity:0}to{transform:none;opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:11}
 
-/* ステータス */
-#status{position:fixed;right:1vw;bottom:.6vh;font-size:1.3vh;color:#55555c;z-index:20}
-#status.err{color:#d66}
+/* ============ スマホ（縦画面） ============ */
+@media (orientation:portrait){
+  html,body{overflow:auto}
+  .app{height:auto;min-height:100%}
+  header{flex:none;grid-template-columns:1fr;gap:1.5vw;padding:5vw 4vw 3vw}
+  .hside{justify-content:center;font-size:2.8vw}
+  .hside.right{display:none}
+  .count b{font-size:5vw}
+  .title{order:-1}
+  .title .en{font-size:2.6vw}
+  .title h1{font-size:9vw;letter-spacing:.2em;padding-left:.2em}
+  .orn span{width:22vw}
+  #board{flex:none;display:flex;flex-direction:column;gap:3vw;padding:2vw 4vw 5vw;position:relative;min-height:60vh}
+  .tier{flex-direction:column;align-items:stretch;gap:2.5vw;padding:5vw}
+  .label{flex-direction:row;align-items:baseline;gap:2.5vw;min-width:0}
+  .label .en{font-size:2.4vw}.label .pt{font-size:3.4vw}
+  .divider{width:auto;height:1px;margin:0}
+  .names{gap:2.4vw;padding:0}
+  .t1 .label .jp{font-size:12vw}.t1 .label .crown{font-size:5vw}.t1 .name{font-size:6.4vw;padding:1.6vw 4vw}
+  .t2 .label .jp{font-size:9.5vw}.t2 .name{font-size:4.8vw;padding:1.4vw 3.6vw}
+  .t3 .label .jp{font-size:7.5vw}.t3 .name{font-size:4.2vw}
+  .t4 .label .jp{font-size:6vw}.t4 .name{font-size:3.6vw}
+  .t1 .corner{width:5vw;height:5vw}
+  .empty{font-size:3.4vw}
+  .name{white-space:normal}
+  #idle .emblem{width:40vw;height:40vw}#idle .emblem span{font-size:16vw}
+  #idle .msg{font-size:6vw}#idle .sub{font-size:2.8vw}
+  #idle .legend{flex-wrap:wrap;justify-content:center;gap:2vw}#idle .legend div{font-size:3.6vw;padding:1.6vw 3vw}
+  footer{flex:none;height:10vw}
+  footer .tag{font-size:2.4vw}#ticker{font-size:3.8vw}#status{display:none}
+  #reveal .who{font-size:5vw}#reveal .drum{font-size:11vw}#reveal .ren{font-size:3.4vw}#reveal .rscore{font-size:6vw}
+  #reveal.r1 .rname{font-size:15vw}#reveal.r1 .rtier{font-size:16vw}
+  #reveal.r2 .rname{font-size:12vw}#reveal.r2 .rtier{font-size:12vw}
+  #reveal.r3 .rname{font-size:10vw}#reveal.r3 .rtier{font-size:9vw}
+  #reveal.r4 .rname{font-size:7vw}#reveal.r4 .rtier{font-size:6vw}
+}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>格付けチェック</h1>
-  <span class="sub" id="count"></span>
-</header>
+<div class="bg"><div class="base"></div><div class="pattern"></div><div class="beam l"></div><div class="beam r"></div><div class="vignette"></div></div>
+<canvas id="ambient"></canvas>
 
-<main id="board">
-  <section class="tier t1"><div class="label">一流<small>100点</small></div><div class="names" id="n1"></div></section>
-  <section class="tier t2"><div class="label">二流<small>80〜99点</small></div><div class="names" id="n2"></div></section>
-  <section class="tier t3"><div class="label">三流<small>50〜79点</small></div><div class="names" id="n3"></div></section>
-  <section class="tier t4"><div class="label">四流<small>49点以下</small></div><div class="names" id="n4"></div></section>
-</main>
+<div class="app">
+  <header>
+    <div class="hside"><span class="live"><i></i>LIVE</span><span class="count">ENTRY<b id="count">0</b></span></div>
+    <div class="title">
+      <div class="en">GRADING CHECK</div>
+      <h1>格付けチェック</h1>
+      <div class="orn"><span></span><em></em><span></span></div>
+    </div>
+    <div class="hside right"><span id="clock"></span></div>
+  </header>
+
+  <main id="board">
+    <section class="tier t1">
+      <i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
+      <div class="label"><span class="crown">♛</span><span class="jp">一流</span><span class="en">FIRST CLASS</span><span class="pt">100 pts</span></div>
+      <div class="divider"></div><div class="names" id="n1"></div>
+    </section>
+    <section class="tier t2">
+      <div class="label"><span class="jp">二流</span><span class="en">SECOND CLASS</span><span class="pt">80 – 99 pts</span></div>
+      <div class="divider"></div><div class="names" id="n2"></div>
+    </section>
+    <section class="tier t3">
+      <div class="label"><span class="jp">三流</span><span class="en">THIRD CLASS</span><span class="pt">50 – 79 pts</span></div>
+      <div class="divider"></div><div class="names" id="n3"></div>
+    </section>
+    <section class="tier t4">
+      <div class="label"><span class="cloud">☁</span><span class="jp">四流</span><span class="en">NOT EVEN CLOSE</span><span class="pt">– 49 pts</span></div>
+      <div class="divider"></div><div class="names" id="n4"></div>
+    </section>
+    <div id="idle">
+      <div class="emblem"><span>♛</span></div>
+      <div class="msg">まもなく発表</div>
+      <div class="sub">WAITING FOR RESULTS</div>
+      <div class="legend">
+        <div class="l1">一流<small>100</small></div><div class="l2">二流<small>80–99</small></div>
+        <div class="l3">三流<small>50–79</small></div><div class="l4">四流<small>–49</small></div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="tag">LATEST</div>
+    <div class="track"><div id="ticker"></div></div>
+    <div id="status">読み込み中…</div>
+  </footer>
+</div>
 
 <div id="reveal"></div>
 <canvas id="fx"></canvas>
-<div id="status">読み込み中…</div>
 
 <script>
 /* ================= CONFIG ================= */
@@ -145,8 +346,8 @@ const CONFIG = {
 /* ========================================= */
 
 const TIERS = {
-  1:{label:'一流', cls:'t1'}, 2:{label:'二流', cls:'t2'},
-  3:{label:'三流', cls:'t3'}, 4:{label:'四流', cls:'t4'}
+  1:{label:'一流', en:'FIRST CLASS'}, 2:{label:'二流', en:'SECOND CLASS'},
+  3:{label:'三流', en:'THIRD CLASS'}, 4:{label:'四流', en:'NOT EVEN CLOSE'}
 };
 function tierOf(score){
   if(score >= 100) return 1;
@@ -193,7 +394,7 @@ function tableToRows(t){
 }
 
 /* ---------- 描画 ---------- */
-let entries = [];          // 表示中の全員
+let entries = [];
 const seen = new Set();
 const queue = [];
 let revealing = false;
@@ -206,9 +407,19 @@ function renderBoard(highlightKey){
     const list = groups[t].slice().reverse(); // 新しい順
     el.innerHTML = list.length
       ? list.map(e=>`<span class="name${e.key===highlightKey?' new':''}">${esc(e.name)}</span>`).join('')
-      : '<span class="empty">—</span>';
+      : '<span class="empty">— no entry —</span>';
   }
-  document.getElementById('count').textContent = `参加者 ${entries.length} 名`;
+  document.getElementById('count').textContent = entries.length;
+  document.getElementById('board').classList.toggle('idle-on', entries.length===0);
+  renderTicker();
+}
+function renderTicker(){
+  const tk = document.getElementById('ticker');
+  const recent = entries.slice(-12).reverse();
+  const html = recent.length
+    ? recent.map(e=>{const t=tierOf(e.score);return `<span class="it">${esc(e.name)} さん <span class="k${t}">◆ ${TIERS[t].label}</span>　${e.score}点</span>`}).join('')
+    : '<span class="it">ようこそ「格付けチェック」へ　◆　あなたは一流？ それとも…</span>';
+  if(tk.innerHTML !== html) tk.innerHTML = html;
 }
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
@@ -229,21 +440,45 @@ async function reveal(e){
   const t = tierOf(e.score);
   const box = document.getElementById('reveal');
   box.className = 'show';
-  box.innerHTML = `<div class="who">${esc(e.name)} さんの格付けは…</div><div class="drum">判定中</div>`;
+  box.innerHTML = `<div class="who">${esc(e.name)} さんの格付けは…</div><div class="drum">判定中</div><div class="drumline"></div>`;
   await sleep(CONFIG.drumSec*1000);
   box.className = 'show r'+t;
-  box.innerHTML = `${t===1?'<div class="rays"></div>':''}
+  box.innerHTML = `${t===1?'<div class="rays"></div>':''}${t===4?'<div class="bulb"></div><div class="cloud">☁</div>':''}
+    <div class="ren">${TIERS[t].en}</div>
     <div class="rname">${esc(e.name)}</div>
     <div class="rtier">${TIERS[t].label}</div>
-    <div class="rscore">${e.score} 点</div>`;
-  if(t===1) fx.start('gold'); else if(t===2) fx.start('silver');
+    <div class="rscore">${e.score} pts</div>
+    ${t===4?'<div class="sad">ざんねん……</div>':''}`;
+  if(t===1) fx.start('gold'); else if(t===2) fx.start('silver'); else if(t===4) fx.start('rain');
   await sleep(CONFIG.showSec*1000);
   fx.stop();
   box.className = '';
   box.innerHTML = '';
 }
 
-/* ---------- 紙吹雪 / きらめき ---------- */
+/* ---------- 背景のきらめき（常時） ---------- */
+(()=>{
+  const cv=document.getElementById('ambient'),ctx=cv.getContext('2d');let W,H,dots=[];
+  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;
+    dots=Array.from({length:Math.round(W*H/22000)},()=>mk(true))}
+  function mk(init){return{x:Math.random()*W,y:init?Math.random()*H:H+20,r:.6+Math.random()*2.6,vy:.15+Math.random()*.45,
+    ph:Math.random()*6.28,hue:Math.random()<.8?'255,214,120':'255,255,255'}}
+  addEventListener('resize',resize);resize();
+  (function loop(){
+    ctx.clearRect(0,0,W,H);
+    for(const d of dots){
+      d.y-=d.vy;d.ph+=.02;d.x+=Math.sin(d.ph)*.2;
+      if(d.y<-20)Object.assign(d,mk(false));
+      const a=.25+.35*Math.sin(d.ph*1.7)**2;
+      const g=ctx.createRadialGradient(d.x,d.y,0,d.x,d.y,d.r*4);
+      g.addColorStop(0,`rgba(${d.hue},${a})`);g.addColorStop(1,`rgba(${d.hue},0)`);
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(d.x,d.y,d.r*4,0,6.28);ctx.fill();
+    }
+    requestAnimationFrame(loop);
+  })();
+})();
+
+/* ---------- 紙吹雪 / きらめき（発表時） ---------- */
 const fx = (()=>{
   const cv = document.getElementById('fx'), ctx = cv.getContext('2d');
   let parts=[], running=false, mode='gold', raf;
@@ -251,6 +486,10 @@ const fx = (()=>{
   addEventListener('resize',resize);resize();
   const palettes = {gold:['#ffe680','#f5c542','#fff4c2','#e0a82e','#ffffff'], silver:['#ffffff','#cfd6e3','#9fb0cc']};
   function spawn(){
+    if(mode==='rain'){
+      for(let i=0;i<4;i++) parts.push({rain:true,x:Math.random()*(cv.width+200)-100,y:-40,vx:-1.2,vy:14+Math.random()*8,len:18+Math.random()*24});
+      return;
+    }
     const p = palettes[mode];
     const n = mode==='gold'?3:1;
     for(let i=0;i<n;i++) parts.push({x:Math.random()*cv.width,y:-20,vx:(Math.random()-.5)*2,vy:2+Math.random()*(mode==='gold'?4:2),
@@ -263,6 +502,7 @@ const fx = (()=>{
     if(running) spawn();
     parts = parts.filter(p=>p.y<cv.height+30);
     for(const p of parts){
+      if(p.rain){p.x+=p.vx;p.y+=p.vy;ctx.strokeStyle='rgba(150,165,185,.35)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+p.vx*p.len/p.vy,p.y+p.len);ctx.stroke();continue}
       p.x+=p.vx;p.y+=p.vy;p.a+=p.va;ctx.fillStyle=p.c;
       if(p.shape==='rect'){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r);ctx.restore()}
       else{ctx.globalAlpha=.6+.4*Math.sin(p.a*3);star(p.x,p.y,p.r);ctx.globalAlpha=1}
@@ -271,6 +511,10 @@ const fx = (()=>{
   }
   return {start(m){mode=m;running=true;cancelAnimationFrame(raf);tick()}, stop(){running=false}};
 })();
+
+/* ---------- 時計 ---------- */
+function tickClock(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}
+tickClock();setInterval(tickClock,10000);
 
 /* ---------- ポーリング ---------- */
 let first = true;
@@ -294,7 +538,7 @@ async function poll(){
 
 /* ---------- デモ（?demo=1） ---------- */
 const demoPool=[['山田 太郎',100],['佐藤 花子',90],['鈴木 一郎',60],['高橋 次郎',30],['田中 美咲',80],['伊藤 健',100],['渡辺 さくら',50],['中村 翔',20],['小林 葵',95],['加藤 陸',70]];
-let demoCount=3;
+let demoCount=Number(params.get('demostart') ?? 3);
 function demoRows(){ return demoPool.slice(0,Math.min(demoCount++,demoPool.length)).map((d,i)=>({key:'demo'+i,name:d[0],score:d[1]})); }
 
 /* ---------- キー操作 ---------- */
