@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>格付けモニター</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* ===== 設定はページ下部 CONFIG を参照 ===== */
+:root{
+  --bg:#07070c;
+  --gold1:#fff4c2; --gold2:#f5c542; --gold3:#a8781a;
+  --silver1:#ffffff; --silver2:#cfd6e3; --silver3:#7d8799;
+  --plain:#e8e8ec; --dim:#6b6b72;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:radial-gradient(ellipse at 50% 0%,#1a1626 0%,var(--bg) 60%);color:#fff;
+  font-family:"Noto Sans JP",sans-serif;}
+.mincho{font-family:"Shippori Mincho B1",serif}
+
+/* ---------- ヘッダー ---------- */
+header{height:11vh;display:flex;align-items:center;justify-content:center;gap:2vw;
+  border-bottom:1px solid rgba(245,197,66,.25)}
+header h1{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:5.2vh;letter-spacing:.35em;
+  background:linear-gradient(180deg,var(--gold1),var(--gold2) 55%,var(--gold3));-webkit-background-clip:text;background-clip:text;color:transparent}
+header .sub{font-size:1.8vh;color:#a99a72;letter-spacing:.2em}
+
+/* ---------- ボード ---------- */
+#board{height:89vh;display:grid;grid-template-rows:1.5fr 1.2fr 1fr .8fr;gap:1.2vh;padding:1.5vh 2vw}
+.tier{display:flex;align-items:center;gap:2vw;border-radius:1.2vh;padding:0 2vw;overflow:hidden;position:relative}
+.tier .label{flex:0 0 13vw;text-align:center;font-family:"Shippori Mincho B1",serif;font-weight:800;line-height:1}
+.tier .label small{display:block;font-family:"Noto Sans JP";font-weight:400;font-size:1.5vh;margin-top:.8vh;letter-spacing:.1em;opacity:.75}
+.tier .names{flex:1;display:flex;flex-wrap:wrap;align-content:center;gap:1vh 1.6vw;overflow:hidden;max-height:100%}
+.tier .empty{opacity:.35;font-size:1.8vh}
+
+/* 1流：華やか */
+.t1{background:linear-gradient(110deg,#2a1d05,#4a3408 40%,#2a1d05);border:2px solid var(--gold2);
+  box-shadow:0 0 3vh rgba(245,197,66,.35), inset 0 0 4vh rgba(245,197,66,.15)}
+.t1::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,240,180,.25) 50%,transparent 70%);
+  transform:translateX(-100%);animation:shine 4s ease-in-out infinite;pointer-events:none}
+.t1 .label{font-size:7vh;background:linear-gradient(180deg,var(--gold1),var(--gold2) 50%,var(--gold3));-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 1vh rgba(245,197,66,.6))}
+.t1 .label small{color:var(--gold1);-webkit-text-fill-color:var(--gold1)}
+.t1 .name{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:5vh;
+  background:linear-gradient(180deg,#fffbe6,var(--gold2) 60%,#c99520);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 .8vh rgba(255,215,90,.7))}
+.t1 .name::before{content:"♛ ";-webkit-text-fill-color:var(--gold2)}
+
+/* 2流：まあまあ華やか */
+.t2{background:linear-gradient(110deg,#1b1f29,#2b3140 50%,#1b1f29);border:1px solid var(--silver2);box-shadow:0 0 1.5vh rgba(207,214,227,.2)}
+.t2 .label{font-size:5.6vh;background:linear-gradient(180deg,#fff,var(--silver2) 60%,var(--silver3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.t2 .label small{-webkit-text-fill-color:var(--silver2)}
+.t2 .name{font-family:"Shippori Mincho B1",serif;font-weight:600;font-size:3.6vh;color:#f3f6fb;text-shadow:0 0 .8vh rgba(200,215,240,.45)}
+
+/* 3流：ふつう */
+.t3{background:#16161b;border:1px solid #2c2c33}
+.t3 .label{font-size:4.4vh;color:var(--plain)}
+.t3 .name{font-size:2.8vh;font-weight:400;color:var(--plain)}
+
+/* 4流：地味 */
+.t4{background:#0e0e11;border:1px dashed #26262b}
+.t4 .label{font-size:3.4vh;color:var(--dim)}
+.t4 .name{font-size:2vh;color:var(--dim)}
+
+.name{white-space:nowrap}
+.name.new{animation:pop 1.2s ease-out}
+
+@keyframes shine{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}
+@keyframes pop{0%{transform:scale(1.8);opacity:0}60%{transform:scale(.95);opacity:1}100%{transform:scale(1)}}
+
+/* ---------- 発表演出（全画面） ---------- */
+#reveal{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:10;overflow:hidden}
+#reveal.show{display:flex}
+#reveal .who{font-size:4vh;letter-spacing:.2em;opacity:.8;margin-bottom:2vh}
+#reveal .rname{font-weight:800;text-align:center;line-height:1.2;max-width:90vw;word-break:break-all}
+#reveal .rtier{font-family:"Shippori Mincho B1",serif;font-weight:800;margin-top:3vh}
+#reveal .rscore{margin-top:1.5vh;font-size:3vh;opacity:.7;letter-spacing:.15em}
+#reveal .drum{font-family:"Shippori Mincho B1",serif;font-size:7vh;letter-spacing:.4em;animation:blink .6s infinite alternate}
+@keyframes blink{from{opacity:.25}to{opacity:1}}
+
+#reveal.r1{background:radial-gradient(circle at 50% 45%,#5a3f0a 0%,#1c1303 55%,#000 100%)}
+#reveal.r1 .rname{font-family:"Shippori Mincho B1",serif;font-size:14vh;
+  background:linear-gradient(180deg,#fffdf0,var(--gold2) 55%,#b07f16);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 2.5vh rgba(255,210,80,.8));animation:zoomIn 1s cubic-bezier(.2,1.6,.4,1)}
+#reveal.r1 .rtier{font-size:12vh;color:var(--gold2);text-shadow:0 0 4vh rgba(255,200,60,.9);animation:zoomIn 1s .4s both cubic-bezier(.2,1.6,.4,1)}
+#reveal.r1 .rays{position:absolute;inset:-50%;background:repeating-conic-gradient(from 0deg,rgba(255,215,100,.13) 0 6deg,transparent 6deg 18deg);animation:spin 30s linear infinite;z-index:-1}
+
+#reveal.r2{background:radial-gradient(circle at 50% 45%,#3a4256 0%,#12151d 60%,#050608 100%)}
+#reveal.r2 .rname{font-family:"Shippori Mincho B1",serif;font-size:11vh;color:#fff;text-shadow:0 0 2vh rgba(200,215,240,.7);animation:zoomIn .8s ease-out}
+#reveal.r2 .rtier{font-size:9vh;background:linear-gradient(180deg,#fff,var(--silver2) 60%,var(--silver3));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+#reveal.r3{background:#18181d}
+#reveal.r3 .rname{font-size:9vh;color:var(--plain);animation:fadeUp .6s ease-out}
+#reveal.r3 .rtier{font-size:7vh;color:var(--plain)}
+
+#reveal.r4{background:#0b0b0d}
+#reveal.r4 .rname{font-size:6vh;color:var(--dim);font-weight:400;animation:fadeUp 1.2s ease-out}
+#reveal.r4 .rtier{font-size:5vh;color:#4b4b52}
+
+@keyframes zoomIn{from{transform:scale(.2);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes fadeUp{from{transform:translateY(3vh);opacity:0}to{transform:none;opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+canvas#fx{position:fixed;inset:0;pointer-events:none;z-index:11}
+
+/* ステータス */
+#status{position:fixed;right:1vw;bottom:.6vh;font-size:1.3vh;color:#55555c;z-index:20}
+#status.err{color:#d66}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>格付けチェック</h1>
+  <span class="sub" id="count"></span>
+</header>
+
+<main id="board">
+  <section class="tier t1"><div class="label">一流<small>100点</small></div><div class="names" id="n1"></div></section>
+  <section class="tier t2"><div class="label">二流<small>80〜99点</small></div><div class="names" id="n2"></div></section>
+  <section class="tier t3"><div class="label">三流<small>50〜79点</small></div><div class="names" id="n3"></div></section>
+  <section class="tier t4"><div class="label">四流<small>49点以下</small></div><div class="names" id="n4"></div></section>
+</main>
+
+<div id="reveal"></div>
+<canvas id="fx"></canvas>
+<div id="status">読み込み中…</div>
+
+<script>
+/* ================= CONFIG ================= */
+const params = new URLSearchParams(location.search);
+const CONFIG = {
+  sheetId: params.get('sheet') || '1PdR7uvyse2xVB_mQyl_N-6fO2ls9XQuU96LieB50DbA',
+  gid:     params.get('gid')   || '1647536822',
+  pollSec: Number(params.get('poll') || 5),      // 取得間隔（秒）
+  drumSec: Number(params.get('drum') || 3),      // 「判定中…」の秒数
+  showSec: Number(params.get('show') || 8),      // 発表画面の表示秒数
+  revealExistingOnStart: params.get('replay') === '1', // 起動時に既存データも発表するか
+  demo: params.get('demo') === '1',
+  scoreHeader: 'スコア',
+  nameHeader:  '名前',
+};
+/* ========================================= */
+
+const TIERS = {
+  1:{label:'一流', cls:'t1'}, 2:{label:'二流', cls:'t2'},
+  3:{label:'三流', cls:'t3'}, 4:{label:'四流', cls:'t4'}
+};
+function tierOf(score){
+  if(score >= 100) return 1;
+  if(score >= 80)  return 2;
+  if(score >= 50)  return 3;
+  return 4;
+}
+// "80 / 100" や "80" などを点数(100点満点)に
+function parseScore(v){
+  if(v === null || v === undefined) return null;
+  const s = String(v).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).trim();
+  if(!s) return null;
+  const m = s.match(/(-?\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+  if(m){ const a=+m[1], b=+m[2]; return b>0 ? Math.round(a/b*100) : null; }
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- データ取得（JSONP：CORS不要） ---------- */
+let reqSeq = 0;
+function fetchSheet(){
+  return new Promise((resolve,reject)=>{
+    const cb = '__gviz_cb_' + (++reqSeq);
+    const s = document.createElement('script');
+    const timer = setTimeout(()=>{cleanup();reject(new Error('タイムアウト'))},15000);
+    function cleanup(){clearTimeout(timer);delete window[cb];s.remove();}
+    window[cb] = res => { cleanup(); res.status==='error' ? reject(new Error(res.errors?.[0]?.detailed_message||'取得エラー')) : resolve(res.table); };
+    s.onerror = ()=>{cleanup();reject(new Error('接続できません（シートの共有設定を確認）'))};
+    s.src = `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?gid=${CONFIG.gid}&headers=1&tqx=responseHandler:${cb}&_=${Date.now()}`;
+    document.head.appendChild(s);
+  });
+}
+function tableToRows(t){
+  const heads = t.cols.map(c=>(c.label||'').trim());
+  const si = heads.findIndex(h=>h.includes(CONFIG.scoreHeader));
+  const ni = heads.findIndex(h=>h.includes(CONFIG.nameHeader));
+  if(si<0 || ni<0) throw new Error(`「${CONFIG.scoreHeader}」「${CONFIG.nameHeader}」列が見つかりません`);
+  return t.rows.map((r,i)=>{
+    const cell = j => r.c[j] ? (r.c[j].f ?? r.c[j].v) : null;
+    const ts = cell(0);
+    return { key: `${i}|${ts}`, name: (cell(ni)??'').toString().trim(), score: parseScore(cell(si)) };
+  }).filter(r => r.name && r.score !== null);
+}
+
+/* ---------- 描画 ---------- */
+let entries = [];          // 表示中の全員
+const seen = new Set();
+const queue = [];
+let revealing = false;
+
+function renderBoard(highlightKey){
+  const groups = {1:[],2:[],3:[],4:[]};
+  entries.forEach(e=>groups[tierOf(e.score)].push(e));
+  for(const t of [1,2,3,4]){
+    const el = document.getElementById('n'+t);
+    const list = groups[t].slice().reverse(); // 新しい順
+    el.innerHTML = list.length
+      ? list.map(e=>`<span class="name${e.key===highlightKey?' new':''}">${esc(e.name)}</span>`).join('')
+      : '<span class="empty">—</span>';
+  }
+  document.getElementById('count').textContent = `参加者 ${entries.length} 名`;
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+async function runQueue(){
+  if(revealing) return;
+  revealing = true;
+  while(queue.length){
+    const e = queue.shift();
+    await reveal(e);
+    entries.push(e);
+    renderBoard(e.key);
+  }
+  revealing = false;
+}
+
+async function reveal(e){
+  const t = tierOf(e.score);
+  const box = document.getElementById('reveal');
+  box.className = 'show';
+  box.innerHTML = `<div class="who">${esc(e.name)} さんの格付けは…</div><div class="drum">判定中</div>`;
+  await sleep(CONFIG.drumSec*1000);
+  box.className = 'show r'+t;
+  box.innerHTML = `${t===1?'<div class="rays"></div>':''}
+    <div class="rname">${esc(e.name)}</div>
+    <div class="rtier">${TIERS[t].label}</div>
+    <div class="rscore">${e.score} 点</div>`;
+  if(t===1) fx.start('gold'); else if(t===2) fx.start('silver');
+  await sleep(CONFIG.showSec*1000);
+  fx.stop();
+  box.className = '';
+  box.innerHTML = '';
+}
+
+/* ---------- 紙吹雪 / きらめき ---------- */
+const fx = (()=>{
+  const cv = document.getElementById('fx'), ctx = cv.getContext('2d');
+  let parts=[], running=false, mode='gold', raf;
+  function resize(){cv.width=innerWidth;cv.height=innerHeight}
+  addEventListener('resize',resize);resize();
+  const palettes = {gold:['#ffe680','#f5c542','#fff4c2','#e0a82e','#ffffff'], silver:['#ffffff','#cfd6e3','#9fb0cc']};
+  function spawn(){
+    const p = palettes[mode];
+    const n = mode==='gold'?3:1;
+    for(let i=0;i<n;i++) parts.push({x:Math.random()*cv.width,y:-20,vx:(Math.random()-.5)*2,vy:2+Math.random()*(mode==='gold'?4:2),
+      r:mode==='gold'?4+Math.random()*6:2+Math.random()*3,a:Math.random()*6,va:(Math.random()-.5)*.3,c:p[Math.random()*p.length|0],
+      shape:mode==='gold'&&Math.random()<.6?'rect':'star'});
+  }
+  function star(x,y,r){ctx.beginPath();for(let i=0;i<8;i++){const rr=i%2?r*.35:r;const ang=i*Math.PI/4;ctx.lineTo(x+Math.cos(ang)*rr,y+Math.sin(ang)*rr)}ctx.closePath();ctx.fill()}
+  function tick(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    if(running) spawn();
+    parts = parts.filter(p=>p.y<cv.height+30);
+    for(const p of parts){
+      p.x+=p.vx;p.y+=p.vy;p.a+=p.va;ctx.fillStyle=p.c;
+      if(p.shape==='rect'){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.fillRect(-p.r,-p.r/2,p.r*2,p.r);ctx.restore()}
+      else{ctx.globalAlpha=.6+.4*Math.sin(p.a*3);star(p.x,p.y,p.r);ctx.globalAlpha=1}
+    }
+    if(running||parts.length) raf=requestAnimationFrame(tick); else ctx.clearRect(0,0,cv.width,cv.height);
+  }
+  return {start(m){mode=m;running=true;cancelAnimationFrame(raf);tick()}, stop(){running=false}};
+})();
+
+/* ---------- ポーリング ---------- */
+let first = true;
+async function poll(){
+  const st = document.getElementById('status');
+  try{
+    const rows = CONFIG.demo ? demoRows() : tableToRows(await fetchSheet());
+    for(const r of rows){
+      if(seen.has(r.key)) continue;
+      seen.add(r.key);
+      if(first && !CONFIG.revealExistingOnStart) entries.push(r); else queue.push(r);
+    }
+    if(first) renderBoard();
+    first = false;
+    runQueue();
+    st.className=''; st.textContent = `更新 ${new Date().toLocaleTimeString('ja-JP')}`;
+  }catch(err){
+    st.className='err'; st.textContent = '⚠ ' + err.message;
+  }
+}
+
+/* ---------- デモ（?demo=1） ---------- */
+const demoPool=[['山田 太郎',100],['佐藤 花子',90],['鈴木 一郎',60],['高橋 次郎',30],['田中 美咲',80],['伊藤 健',100],['渡辺 さくら',50],['中村 翔',20],['小林 葵',95],['加藤 陸',70]];
+let demoCount=3;
+function demoRows(){ return demoPool.slice(0,Math.min(demoCount++,demoPool.length)).map((d,i)=>({key:'demo'+i,name:d[0],score:d[1]})); }
+
+/* ---------- キー操作 ---------- */
+addEventListener('keydown',ev=>{
+  if(ev.key==='f'||ev.key==='F'){ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen(); }
+  if(ev.key==='r'||ev.key==='R'){ const last=entries[entries.length-1]; if(last){entries.pop();queue.push(last);runQueue();} }
+  if(ev.key==='Escape'){ fx.stop(); }
+});
+
+renderBoard();
+poll();
+setInterval(poll, CONFIG.pollSec*1000);
+</script>
+</body>
+</html>
